@@ -29,6 +29,7 @@ The MCP server exposes the following tools:
 - `list_projects`: Lists Unleash projects available to the configured token, with optional pagination.
 - `toggle_flag_environment`: Enables or disables a feature flag in an environment.
 - `update_flag_strategy`: Updates an existing strategy in place (constraints, rollout, variants).
+- `update_flag_tags`: Adds or removes tags on an existing feature flag.
 - `remove_flag_strategy`: Deletes a feature flag's strategy from an environment.
 - `cleanup_flag`: Generates instructions for safely removing flagged code paths.
 
@@ -274,7 +275,7 @@ The tool accepts the following parameters:
 - `description` (required): Clear explanation of what the flag controls and why it exists.
 - `projectId` (optional): Target project (defaults to `UNLEASH_DEFAULT_PROJECT`).
 - `impressionData` (optional): Enable analytics tracking (defaults to false).
-- `tags` (optional): Tags to attach to the flag, as `[{ "type": "...", "value": "..." }]`. Use this when your organization requires ownership or governance tags on every flag. The tag type must already exist in Unleash; if a tag cannot be applied the flag is still created and the response reports the tag that failed.
+- `tags` (optional): Tags to attach to the flag, as `[{ "type": "...", "value": "..." }]`. Use this when your organization requires ownership or governance tags on every flag. The tag type must already exist in Unleash; if a tag cannot be applied the flag is still created and the response reports the tag that failed. To tag a flag that already exists, use [`update_flag_tags`](#update-flag-tags).
 
 #### Usage example
 
@@ -828,6 +829,47 @@ Use toggle_flag_environment with:
 
 Returns a confirmation of the new state, a summary of the environment (enabled/disabled, strategy count), and links to the flag in the Unleash Admin UI and Admin API.
 
+### Update flag tags
+
+The `update_flag_tags` tool adds or removes tags on a feature flag that already exists. `create_flag` only sets tags at creation time, so this is the tool to reach for when an existing flag needs ownership or governance tags.
+
+#### When to use
+
+Use this tool to tag flags created before your tagging convention existed, to hand a flag over to another owner, or to fix a typo in a tag. Only the tags listed in `removeTags` are detached — tags you do not mention are left alone. Use `get_flag_state` to see a flag's current tags.
+
+#### Parameters
+
+- `featureName` (required): Feature flag name.
+- `projectId` (optional): Project ID (defaults to `UNLEASH_DEFAULT_PROJECT`).
+- `addTags` (optional): Tags to attach, as `[{ "type": "...", "value": "..." }]`. The tag type must already exist in Unleash.
+- `removeTags` (optional): Tags to detach, same shape.
+
+At least one of `addTags` or `removeTags` is required.
+
+#### Usage example
+
+**Agent prompt**
+
+```
+Use update_flag_tags to tag "new-checkout-flow" as owned by squad-checkout
+and drop the squad-old tag.
+```
+
+**Tool payload**
+
+```json
+{
+  "featureName": "new-checkout-flow",
+  "projectId": "ecommerce",
+  "addTags": [{ "type": "simple", "value": "squad-checkout" }],
+  "removeTags": [{ "type": "simple", "value": "squad-old" }]
+}
+```
+
+**Tool output**
+
+Returns a confirmation of the tags added and removed, the flag's resulting tag list, and links to the flag in the Unleash Admin UI and Admin API. The structured output includes `addedTags`, `removedTags`, and the resulting `tags`.
+
 ### Update flag strategy
 
 The `update_flag_strategy` tool updates an existing strategy in place instead of adding a new one. Fields that are not provided keep their current value, so the tool reads the strategy first and merges the requested changes before writing them back.
@@ -1021,7 +1063,9 @@ src/
 │   ├── toggleFlagEnvironment.ts # toggle_flag_environment tool
 │   ├── removeFlagStrategy.ts    # remove_flag_strategy tool
 │   ├── updateFlagStrategy.ts    # update_flag_strategy tool
-│   └── strategySchemas.ts       # Shared variant/constraint input schemas
+│   ├── updateFlagTags.ts        # update_flag_tags tool
+│   ├── strategySchemas.ts       # Shared variant/constraint input schemas
+│   └── tagSchemas.ts            # Shared flag tag input schema and formatting
 ├── resources/
 │   └── unleashResources.ts      # MCP resource handlers (projects, flags)
 ├── prompts/

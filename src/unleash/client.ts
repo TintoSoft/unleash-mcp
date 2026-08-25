@@ -289,6 +289,40 @@ export class UnleashClient {
     );
   }
 
+  /**
+   * Add and/or remove tags on an existing feature flag in one call.
+   * Endpoint: PUT /api/admin/features/{featureName}/tags
+   *
+   * Unleash applies `addedTags` first and `removedTags` afterwards, and both
+   * lists are mandatory — the omitted side is sent as an empty array.
+   * See: https://docs.getunleash.io/reference/api/unleash/update-tags
+   */
+  async updateFeatureTags(
+    featureName: string,
+    updates: { addedTags?: FeatureTag[]; removedTags?: FeatureTag[] },
+  ): Promise<FeatureTag[]> {
+    const addedTags = updates.addedTags ?? [];
+    const removedTags = updates.removedTags ?? [];
+
+    if (this.dryRun) {
+      return addedTags;
+    }
+
+    const response = await this.requestJson<{ version?: number; tags?: FeatureTag[] }>(
+      `/api/admin/features/${encodeURIComponent(featureName)}/tags`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ addedTags, removedTags }),
+      },
+      {
+        errorMessage: `Failed to update tags on feature ${featureName}`,
+        networkErrorMessage: `Failed to connect to Unleash API while updating tags on feature ${featureName}`,
+      },
+    );
+
+    return response.tags ?? [];
+  }
+
   async listProjects(): Promise<UnleashProjectSummary[]> {
     if (this.dryRun) {
       return [

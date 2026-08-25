@@ -8,6 +8,7 @@ import {
 } from '../context.js';
 import type { FeatureDetails, FeatureEnvironment, FeatureTag } from '../unleash/client.js';
 import { createFlagResourceLink } from '../utils/streaming.js';
+import { formatTags } from './tagSchemas.js';
 
 const getFlagStateSchema = z.object({
   projectId: z
@@ -28,10 +29,6 @@ function summarizeEnvironment(env: FeatureEnvironment): string {
   const enabledStrategies = env.strategies?.filter((s) => !s.disabled).length ?? 0;
   const variants = env.variants?.length ?? 0;
   return `${env.environment ?? env.name}: ${status} (${enabledStrategies}/${strategyCount} active strategies${variants ? `, ${variants} variants` : ''})`;
-}
-
-function formatTags(tags: FeatureTag[]): string {
-  return tags.length > 0 ? tags.map((tag) => `${tag.type}:${tag.value}`).join(', ') : 'none';
 }
 
 export async function getFlagState(
@@ -94,7 +91,7 @@ export async function getFlagState(
       `Feature "${feature.name}" (${feature.type ?? 'unknown type'})`,
       `Enabled: ${feature.enabled ? 'yes' : 'no'} • Archived: ${feature.archived ? 'yes' : 'no'} • Impression data: ${feature.impressionData ? 'on' : 'off'}`,
       `Project: ${feature.project ?? projectId}`,
-      `Tags: ${formatTags(tags)}`,
+      `Tags: ${tags.length > 0 ? formatTags(tags) : 'none'}`,
       `Environments:\n${environmentSummaries}`,
       `View feature: ${url}`,
       `Admin API: ${apiUrl}`,

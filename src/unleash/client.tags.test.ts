@@ -72,3 +72,57 @@ describe('UnleashClient feature tags', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe('UnleashClient updateFeatureTags', () => {
+  it('puts added and removed tags to the feature tags endpoint', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ version: 1, tags: [{ type: 'simple', value: 'squad-checkout' }] }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new UnleashClient('https://unleash.example.com', { Authorization: 'test-pat' });
+
+    const tags = await client.updateFeatureTags('new-checkout-flow', {
+      addedTags: [{ type: 'simple', value: 'squad-checkout' }],
+      removedTags: [{ type: 'simple', value: 'squad-old' }],
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://unleash.example.com/api/admin/features/new-checkout-flow/tags');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual({
+      addedTags: [{ type: 'simple', value: 'squad-checkout' }],
+      removedTags: [{ type: 'simple', value: 'squad-old' }],
+    });
+    expect(tags).toEqual([{ type: 'simple', value: 'squad-checkout' }]);
+  });
+
+  it('sends an empty list for the side that was not requested', async () => {
+    // The Unleash API requires both addedTags and removedTags to be present.
+    const fetchMock = vi.fn(async () => jsonResponse({ version: 1, tags: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new UnleashClient('https://unleash.example.com', { Authorization: 'test-pat' });
+
+    await client.updateFeatureTags('new-checkout-flow', {
+      addedTags: [{ type: 'simple', value: 'squad-checkout' }],
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      addedTags: [{ type: 'simple', value: 'squad-checkout' }],
+      removedTags: [],
+    });
+  });
+
+  it('echoes the added tags without calling the API in dry-run mode', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new UnleashClient('https://unleash.example.com', {}, true);
+
+    const tags = await client.updateFeatureTags('new-checkout-flow', {
+      addedTags: [{ type: 'simple', value: 'squad-checkout' }],
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(tags).toEqual([{ type: 'simple', value: 'squad-checkout' }]);
+  });
+});
