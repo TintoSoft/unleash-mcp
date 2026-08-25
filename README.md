@@ -54,6 +54,29 @@ Before you can run the server, you need the following:
 
 This section covers the different ways to install and run the Unleash MCP server. You can either follow a setup for [agents](#agent-setup) (such as Claude Code and Codex), run the MCP as a [standalone process](#quickstart-with-npx) using npx, or use a [local development](#local-development-setup) setup.
 
+### Using this fork
+
+`npx -y @unleash/mcp@latest` installs the upstream package, which does not include the flag tags (#68) and strategy constraints (#69) support added in this fork. To run this fork, use the [local development setup](#local-development-setup) against this repository and point your agent at the compiled entry point:
+
+```bash
+git clone https://github.com/TintoSoft/unleash-mcp.git
+cd unleash-mcp
+
+corepack enable
+corepack prepare pnpm@11.0.8 --activate
+
+pnpm install
+pnpm build
+
+claude mcp add unleash \
+    --env UNLEASH_BASE_URL={{your-instance-url}} \
+    --env UNLEASH_PAT={{your-personal-access-token}} \
+    --env UNLEASH_DEFAULT_PROJECT={{default_project_id}} \
+    -- node "$(pwd)/dist/index.js" --log-level error
+```
+
+The agent runs `dist/`, not the sources, so re-run `pnpm build` after pulling new commits.
+
 ### Agent setup
 
 You can add the MCP server directly to Claude Code or Codex. Agent configurations are path-specific. You must run the following command from the root directory of the project where you want to use the MCP.
