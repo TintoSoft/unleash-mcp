@@ -250,6 +250,7 @@ The tool accepts the following parameters:
 - `description` (required): Clear explanation of what the flag controls and why it exists.
 - `projectId` (optional): Target project (defaults to `UNLEASH_DEFAULT_PROJECT`).
 - `impressionData` (optional): Enable analytics tracking (defaults to false).
+- `tags` (optional): Tags to attach to the flag, as `[{ "type": "...", "value": "..." }]`. Use this when your organization requires ownership or governance tags on every flag. The tag type must already exist in Unleash; if a tag cannot be applied the flag is still created and the response reports the tag that failed.
 
 #### Usage example
 
@@ -270,7 +271,8 @@ Use create_flag with:
   "type": "release",
   "description": "Gradual rollout of the redesigned checkout experience with improved conversion tracking",
   "projectId": "ecommerce",
-  "impressionData": true
+  "impressionData": true,
+  "tags": [{ "type": "simple", "value": "squad-checkout" }]
 }
 ```
 
@@ -635,7 +637,7 @@ Returns a confirmation with the configured percentage, a link to the flag in the
 
 ### Get flag state
 
-The `get_flag_state` tool fetches a feature flag's current metadata and environment strategies from the Unleash Admin API. It returns the flag's type, enabled/archived status, impression data setting, and a per-environment summary of active strategies and variants.
+The `get_flag_state` tool fetches a feature flag's current metadata and environment strategies from the Unleash Admin API. It returns the flag's type, enabled/archived status, impression data setting, tags, and a per-environment summary of active strategies and variants.
 
 #### When to use
 
@@ -669,7 +671,7 @@ Use get_flag_state with:
 
 **Tool output**
 
-Returns a text summary of the flag (type, enabled/archived/impression-data, project, environment summaries with strategy counts) along with UI and API links. The structured output includes the full feature object with all environments and strategy details.
+Returns a text summary of the flag (type, enabled/archived/impression-data, project, tags, environment summaries with strategy counts) along with UI and API links. The structured output includes the full feature object with all environments and strategy details, plus a normalized `tags` array.
 
 ### List flags
 

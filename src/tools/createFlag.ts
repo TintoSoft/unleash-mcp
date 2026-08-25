@@ -6,7 +6,8 @@ import {
   resolveProjectId,
   type ServerContext,
 } from '../context.js';
-import type { FeatureFlagType } from '../unleash/client.js';
+import type { FeatureFlagType, FeatureTag } from '../unleash/client.js';
+import { normalizeError } from '../utils/errors.js';
 import { createFlagResourceLink, formatFlagCreatedMessage } from '../utils/streaming.js';
 
 /**
@@ -39,9 +40,24 @@ const createFeatureFlagSchema = z.object({
     .boolean()
     .optional()
     .describe('Enable impression data collection for analytics (optional, defaults to false)'),
+  tags: z
+    .array(
+      z.object({
+        type: z.string().min(1).describe('Tag type (must already exist in Unleash, e.g. "simple")'),
+        value: z.string().min(1).describe('Tag value, e.g. "squad-checkout"'),
+      }),
+    )
+    .optional()
+    .describe(
+      'Optional tags to attach to the flag, e.g. [{ "type": "simple", "value": "squad-checkout" }]. Use this when your organization requires ownership/governance tags on every flag.',
+    ),
 });
 
 type CreateFeatureFlagInput = z.infer<typeof createFeatureFlagSchema>;
+
+function formatTags(tags: FeatureTag[]): string {
+  return tags.map((tag) => `${tag.type}:${tag.value}`).join(', ');
+}
 
 /**
  * create_flag tool implementation.
@@ -83,7 +99,32 @@ export async function createFlag(
       type: input.type as FeatureFlagType,
       description: input.description,
       impressionData: input.impressionData,
+      tags: input.tags,
     });
+
+    // Unleash versions that predate inline tags on create ignore the field
+    // silently, so reconcile what actually landed and backfill the rest via the
+    // dedicated tag endpoint.
+    const appliedTags: FeatureTag[] = [...(response.tags ?? [])];
+    const failedTags: Array<{ tag: FeatureTag; message: string }> = [];
+    const missingTags = (input.tags ?? []).filter(
+      (tag) =>
+        !appliedTags.some((applied) => applied.type === tag.type && applied.value === tag.value),
+    );
+
+    for (const tag of missingTags) {
+      try {
+        appliedTags.push(await context.unleashClient.addFeatureTag(response.name, tag));
+      } catch (error) {
+        // The flag itself was created, so a failing tag is a warning, not a
+        // tool failure: surface it and let the caller fix the tag.
+        const normalized = normalizeError(error);
+        failedTags.push({ tag, message: normalized.message });
+        context.logger.warn(
+          `Failed to tag "${response.name}" with ${tag.type}:${tag.value}: ${normalized.message}`,
+        );
+      }
+    }
 
     // Notify progress: Complete
     await context.notifyProgress(
@@ -122,20 +163,30 @@ export async function createFlag(
         description: response.description,
         impressionData: response.impressionData,
         createdAt: response.createdAt,
+        tags: appliedTags,
       },
       links: {
         ui: url,
         api: apiUrl,
         resourceUri: resource.uri,
       },
+      ...(failedTags.length > 0 ? { tagWarnings: failedTags } : {}),
     };
+
+    const tagSummary = appliedTags.length > 0 ? `\nTags: ${formatTags(appliedTags)}` : '';
+    const tagWarning =
+      failedTags.length > 0
+        ? `\nWarning: the flag was created but these tags could not be applied: ${failedTags
+            .map((failed) => `${failed.tag.type}:${failed.tag.value} (${failed.message})`)
+            .join('; ')}. Check that the tag type exists in Unleash.`
+        : '';
 
     // Return response with both text and resource link
     return {
       content: [
         {
           type: 'text',
-          text: `${message}\nAdmin API: ${apiUrl}`,
+          text: `${message}\nAdmin API: ${apiUrl}${tagSummary}${tagWarning}`,
         },
         {
           type: 'resource_link',

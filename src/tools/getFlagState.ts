@@ -6,7 +6,7 @@ import {
   resolveProjectId,
   type ServerContext,
 } from '../context.js';
-import type { FeatureDetails, FeatureEnvironment } from '../unleash/client.js';
+import type { FeatureDetails, FeatureEnvironment, FeatureTag } from '../unleash/client.js';
 import { createFlagResourceLink } from '../utils/streaming.js';
 
 const getFlagStateSchema = z.object({
@@ -28,6 +28,10 @@ function summarizeEnvironment(env: FeatureEnvironment): string {
   const enabledStrategies = env.strategies?.filter((s) => !s.disabled).length ?? 0;
   const variants = env.variants?.length ?? 0;
   return `${env.environment ?? env.name}: ${status} (${enabledStrategies}/${strategyCount} active strategies${variants ? `, ${variants} variants` : ''})`;
+}
+
+function formatTags(tags: FeatureTag[]): string {
+  return tags.length > 0 ? tags.map((tag) => `${tag.type}:${tag.value}`).join(', ') : 'none';
 }
 
 export async function getFlagState(
@@ -82,10 +86,15 @@ export async function getFlagState(
         ? environments.map((env) => `- ${summarizeEnvironment(env)}`).join('\n')
         : '- No environments matched the provided filters.';
 
+    const tags = (feature.tags ?? []).filter(
+      (tag): tag is FeatureTag => Boolean(tag.type) && Boolean(tag.value),
+    );
+
     const messageLines = [
       `Feature "${feature.name}" (${feature.type ?? 'unknown type'})`,
       `Enabled: ${feature.enabled ? 'yes' : 'no'} • Archived: ${feature.archived ? 'yes' : 'no'} • Impression data: ${feature.impressionData ? 'on' : 'off'}`,
       `Project: ${feature.project ?? projectId}`,
+      `Tags: ${formatTags(tags)}`,
       `Environments:\n${environmentSummaries}`,
       `View feature: ${url}`,
       `Admin API: ${apiUrl}`,
@@ -103,6 +112,7 @@ export async function getFlagState(
       featureName: feature.name,
       environmentFilter: input.environment,
       feature: feature as FeatureDetails,
+      tags,
       environments,
       links: {
         ui: url,
