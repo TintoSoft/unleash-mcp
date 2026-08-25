@@ -11,6 +11,7 @@ import { setFlagRolloutTool } from './setFlagRollout.js';
 import { toggleFlagEnvironmentTool } from './toggleFlagEnvironment.js';
 import type { ToolDefinition } from './types.js';
 import { updateFlagStrategyTool } from './updateFlagStrategy.js';
+import { updateFlagTagsTool } from './updateFlagTags.js';
 import { wrapChangeTool } from './wrapChange.js';
 
 const tools = [
@@ -26,6 +27,7 @@ const tools = [
   toggleFlagEnvironmentTool,
   removeFlagStrategyTool,
   updateFlagStrategyTool,
+  updateFlagTagsTool,
 ] as ToolDefinition[];
 
 // The Connectors Directory requires every tool to declare a title and the

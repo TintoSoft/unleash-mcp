@@ -9,6 +9,7 @@ import {
 import type { FeatureFlagType, FeatureTag } from '../unleash/client.js';
 import { normalizeError } from '../utils/errors.js';
 import { createFlagResourceLink, formatFlagCreatedMessage } from '../utils/streaming.js';
+import { flagTagSchema, formatTags } from './tagSchemas.js';
 
 /**
  * Input schema for the create_flag tool.
@@ -41,12 +42,7 @@ const createFeatureFlagSchema = z.object({
     .optional()
     .describe('Enable impression data collection for analytics (optional, defaults to false)'),
   tags: z
-    .array(
-      z.object({
-        type: z.string().min(1).describe('Tag type (must already exist in Unleash, e.g. "simple")'),
-        value: z.string().min(1).describe('Tag value, e.g. "squad-checkout"'),
-      }),
-    )
+    .array(flagTagSchema)
     .optional()
     .describe(
       'Optional tags to attach to the flag, e.g. [{ "type": "simple", "value": "squad-checkout" }]. Use this when your organization requires ownership/governance tags on every flag.',
@@ -54,10 +50,6 @@ const createFeatureFlagSchema = z.object({
 });
 
 type CreateFeatureFlagInput = z.infer<typeof createFeatureFlagSchema>;
-
-function formatTags(tags: FeatureTag[]): string {
-  return tags.map((tag) => `${tag.type}:${tag.value}`).join(', ');
-}
 
 /**
  * create_flag tool implementation.
