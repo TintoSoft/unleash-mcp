@@ -194,6 +194,50 @@ export interface FeatureDetails {
   [key: string]: unknown;
 }
 
+/** A single entry of the Unleash event log. */
+export interface FeatureEvent {
+  id?: number;
+  createdAt?: string;
+  type?: string;
+  createdBy?: string;
+  createdByUserId?: number;
+  environment?: string;
+  project?: string;
+  featureName?: string;
+  /** Human-readable event name rendered by Unleash, e.g. "Flag enabled". */
+  label?: string;
+  /** Markdown narration rendered by Unleash: who did what, where. */
+  summary?: string;
+  data?: Record<string, unknown> | null;
+  preData?: Record<string, unknown> | null;
+  tags?: Array<{ type?: string; value?: string }>;
+  [key: string]: unknown;
+}
+
+/**
+ * Filters of GET /api/admin/search/events. Unleash expects the `IS:` operator
+ * prefix on these query parameters; callers pass plain values and the client
+ * adds it.
+ */
+export interface SearchEventsOptions {
+  feature?: string;
+  project?: string;
+  environment?: string;
+  type?: string;
+  /** yyyy-MM-dd */
+  from?: string;
+  /** yyyy-MM-dd */
+  to?: string;
+  offset?: number;
+  limit?: number;
+}
+
+/** Response of GET /api/admin/search/events. */
+export interface SearchEventsResponse {
+  events: FeatureEvent[];
+  total?: number;
+}
+
 function clampRollout(rolloutPercentage: number): number {
   return Math.min(100, Math.max(0, rolloutPercentage));
 }
@@ -589,6 +633,58 @@ export class UnleashClient {
       {
         errorMessage: `Failed to fetch feature ${featureName} in project ${projectId}`,
         networkErrorMessage: `Failed to connect to Unleash API while fetching feature ${featureName}`,
+      },
+    );
+  }
+
+  /**
+   * Search the Unleash event log: the audit trail the UI shows under a flag.
+   * Filtering, pagination and the total are all done by Unleash through
+   * GET /api/admin/search/events, so nothing is filtered client side.
+   */
+  async searchEvents(options: SearchEventsOptions = {}): Promise<SearchEventsResponse> {
+    if (this.dryRun) {
+      return {
+        total: 1,
+        events: [
+          {
+            id: 1,
+            type: 'feature-environment-enabled',
+            label: 'Flag enabled',
+            createdBy: 'dry-run@example.com',
+            createdAt: new Date().toISOString(),
+            environment: options.environment ?? 'development',
+            featureName: options.feature,
+          },
+        ],
+      };
+    }
+
+    const params = new URLSearchParams();
+    // Unleash validates these against `^(IS):<value>$`.
+    for (const [key, value] of [
+      ['feature', options.feature],
+      ['project', options.project],
+      ['environment', options.environment],
+      ['type', options.type],
+      ['from', options.from],
+      ['to', options.to],
+    ] as const) {
+      if (value) params.set(key, `IS:${value}`);
+    }
+    if (options.offset !== undefined) params.set('offset', String(options.offset));
+    if (options.limit !== undefined) params.set('limit', String(options.limit));
+
+    const query = params.toString();
+
+    return this.requestJson<SearchEventsResponse>(
+      `/api/admin/search/events${query ? `?${query}` : ''}`,
+      {
+        method: 'GET',
+      },
+      {
+        errorMessage: 'Failed to search the Unleash event log',
+        networkErrorMessage: 'Failed to connect to Unleash API while searching the event log',
       },
     );
   }
