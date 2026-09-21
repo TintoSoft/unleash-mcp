@@ -3,6 +3,7 @@ import { cleanupFlagTool } from './cleanupFlag.js';
 import { createFlagTool } from './createFlag.js';
 import { detectFlagTool } from './detectFlag.js';
 import { evaluateChangeTool } from './evaluateChange.js';
+import { getFlagEventsTool } from './getFlagEvents.js';
 import { getFlagStateTool } from './getFlagState.js';
 import { listFlagsTool } from './listFlags.js';
 import { listProjectsTool } from './listProjects.js';
@@ -22,6 +23,7 @@ const tools = [
   cleanupFlagTool,
   setFlagRolloutTool,
   getFlagStateTool,
+  getFlagEventsTool,
   listFlagsTool,
   listProjectsTool,
   toggleFlagEnvironmentTool,
@@ -61,6 +63,7 @@ describe('tool annotations', () => {
         'detect_flag',
         'evaluate_change',
         'get_flag_state',
+        'get_flag_events',
         'list_flags',
         'list_projects',
         'wrap_change',
