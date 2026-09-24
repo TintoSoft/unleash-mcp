@@ -6,12 +6,18 @@ import { updateFlagTags } from './updateFlagTags.js';
 function makeContext(client: Partial<UnleashClient>): ServerContext {
   return {
     config: {
-      unleash: { baseUrl: 'https://unleash.example.com', pat: 'test-pat' },
+      unleash: {
+        baseUrl: 'https://unleash.example.com',
+        pat: 'test-pat',
+        feedbackUrl: 'https://feedback.example.com',
+      },
       server: { dryRun: false, logLevel: 'error', attributionEnabled: true },
     },
     unleashClient: client as UnleashClient,
+    feedbackClient: {} as ServerContext['feedbackClient'],
     logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     cache: { projects: null, featureFlags: new Map() },
+    getClientInfo: () => undefined,
     notifyProgress: vi.fn(async () => {}),
   };
 }
