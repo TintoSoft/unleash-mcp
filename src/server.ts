@@ -1,7 +1,7 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Variables } from '@modelcontextprotocol/sdk/shared/uriTemplate.js';
 import { UriTemplate } from '@modelcontextprotocol/sdk/shared/uriTemplate.js';
-import { type Config, normalizeBaseUrl } from './config.js';
+import { type Config, normalizeBaseUrl, resolveFeedbackBaseUrl } from './config.js';
 import { createLogger, type Logger, type ServerContext } from './context.js';
 import {
   extractFlagNameFromFeatureUri,
@@ -34,6 +34,7 @@ import { updateFlagTagsTool } from './tools/updateFlagTags.js';
 import { wrapChangeTool } from './tools/wrapChange.js';
 import type { ClientInfo } from './unleash/attribution.js';
 import { UnleashClient } from './unleash/client.js';
+import { FeedbackHttpClient } from './unleash/feedbackHttpClient.js';
 import { notifyProgress } from './utils/streaming.js';
 import { VERSION } from './version.js';
 
@@ -45,6 +46,7 @@ export interface CreateServerOptions {
   dryRun?: boolean;
   logLevel?: 'debug' | 'info' | 'warn' | 'error';
   attributionEnabled?: boolean;
+  feedbackUrl?: string;
   logger?: Logger;
 }
 
@@ -63,6 +65,7 @@ class UriTemplateWithMatcher extends UriTemplate {
 
 export function createUnleashMcpServer(options: CreateServerOptions): McpServer {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
+  const feedbackUrl = resolveFeedbackBaseUrl(options.feedbackUrl);
   const dryRun = options.dryRun ?? false;
   const logLevel = options.logLevel ?? 'error';
   const attributionEnabled = options.attributionEnabled ?? true;
@@ -76,6 +79,7 @@ export function createUnleashMcpServer(options: CreateServerOptions): McpServer 
       pat: '',
       defaultProject: options.defaultProject,
       defaultEnvironment: options.defaultEnvironment,
+      feedbackUrl,
     },
     server: {
       dryRun,
@@ -124,11 +128,15 @@ export function createUnleashMcpServer(options: CreateServerOptions): McpServer 
     attributionEnabled,
   );
 
+  const feedbackClient = new FeedbackHttpClient(feedbackUrl);
+
   const context: ServerContext = {
     config,
     unleashClient,
+    feedbackClient,
     logger,
     cache: { projects: null, featureFlags: new Map() },
+    getClientInfo,
     notifyProgress: notifyProgress(server),
   };
 

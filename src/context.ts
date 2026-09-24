@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Config } from './config.js';
+import type { ClientInfo } from './unleash/attribution.js';
 import type { FeatureFlagSummary, UnleashClient, UnleashProjectSummary } from './unleash/client.js';
+import type { FeedbackHttpClient } from './unleash/feedbackHttpClient.js';
 import { normalizeError } from './utils/errors.js';
 
 export interface ResourceCache {
@@ -16,8 +18,10 @@ export interface ResourceCache {
 export interface ServerContext {
   config: Config;
   unleashClient: UnleashClient;
+  feedbackClient: FeedbackHttpClient;
   logger: Logger;
   cache: ResourceCache;
+  getClientInfo: () => ClientInfo | undefined;
   notifyProgress: (
     progressToken: string | number | undefined,
     current: number,
