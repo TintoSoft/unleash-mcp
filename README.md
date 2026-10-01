@@ -25,6 +25,7 @@ The MCP server exposes the following tools:
 - `wrap_change`: Provides guidance on how to wrap a change in a feature flag.
 - `set_flag_rollout`: Configures rollout strategies for a feature flag (does not enable the flag).
 - `get_flag_state`: Surfaces a feature flag's metadata and its activation strategies.
+- `get_flag_events`: Reads a flag's event log — who changed it, when, in which environment and what changed.
 - `list_flags`: Lists all feature flags in a project, with optional pagination and sort order.
 - `list_projects`: Lists Unleash projects available to the configured token, with optional pagination.
 - `toggle_flag_environment`: Enables or disables a feature flag in an environment.
@@ -711,6 +712,62 @@ Use get_flag_state with:
 **Tool output**
 
 Returns a text summary of the flag (type, enabled/archived/impression-data, project, tags, environment summaries with strategy counts) along with UI and API links. The structured output includes the full feature object with all environments and strategy details, plus a normalized `tags` array.
+
+### Get flag events
+
+The `get_flag_events` tool searches a feature flag's event log through the Unleash Admin API: the same audit trail the UI shows under a flag. Each entry carries who made the change, when, in which environment and what changed, newest first.
+
+Unleash does the work: the tool calls `GET /api/admin/search/events`, so the filters, the pagination and the total are applied server side, and the text summary reuses the `summary` narration Unleash itself renders, falling back to `label` and then to the raw event type on instances that do not send them.
+
+#### When to use
+
+Use it to answer questions the current state cannot: when a flag was enabled and by whom, how its rollout moved over time, or whether a flag changed between two test runs. Without it, an agent looking at a flag can only see where it stands now and has to guess how it got there.
+
+#### Parameters
+
+- `featureName` (required): Feature flag name.
+- `projectId` (optional): Scopes the search and builds the UI link (defaults to `UNLEASH_DEFAULT_PROJECT`).
+- `environment` (optional): Only events for this environment.
+- `type` (optional): Only events of this exact Unleash event type, e.g. `feature-environment-enabled`, `feature-strategy-update`, `feature-tag-added`.
+- `from` / `to` (optional): Date range, `yyyy-MM-dd`, as the Unleash API expects.
+- `offset` (optional): Events to skip, to page through a long log (default: 0).
+- `limit` (optional): Maximum number of events to return, newest first (default: 20, max: 1000).
+
+#### Usage example
+
+**Agent prompt**
+
+```
+Use get_flag_events with:
+- featureName: "new-checkout-flow"
+- environment: "staging"
+- type: "feature-environment-enabled"
+```
+
+**Tool payload**
+
+```json
+{
+  "featureName": "new-checkout-flow",
+  "environment": "staging",
+  "type": "feature-environment-enabled"
+}
+```
+
+**Tool output**
+
+A chronological summary, one line per event:
+
+```
+Event log for "new-checkout-flow" — showing 2 of 6 matching events (filtered by environment "staging", type "feature-environment-enabled"), newest first.
+- 2026-09-21 15:47 UTC · **maintainer@example.com** enabled **new-checkout-flow** for the **staging** environment
+- 2026-08-14 09:12 UTC · **teammate@example.com** disabled **new-checkout-flow** for the **staging** environment
+Admin API: https://unleash.example.com/api/admin/search/events
+```
+
+The structured output includes the raw events with their `data` / `preData` payloads, plus the total Unleash counted for the filters and how many events this page returned.
+
+> Unleash keeps events for a limited retention window, so a change old enough may no longer be listed.
 
 ### List flags
 
