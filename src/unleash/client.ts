@@ -134,6 +134,14 @@ export interface SetFlagRolloutOptions {
   constraints?: StrategyConstraint[];
 }
 
+export interface SetRemoteAddressOptions {
+  /** IP addresses or CIDR ranges, e.g. `10.0.0.0/22`. */
+  ips: string[];
+  title?: string;
+  disabled?: boolean;
+  constraints?: StrategyConstraint[];
+}
+
 /**
  * Fields that can be changed on an existing strategy. Anything omitted keeps
  * its current value.
@@ -499,6 +507,51 @@ export class UnleashClient {
       },
       {
         errorMessage: `Failed to configure flexibleRollout strategy for feature ${featureName} in ${environment}`,
+        networkErrorMessage: `Failed to connect to Unleash API while configuring strategy for feature ${featureName}`,
+      },
+    );
+  }
+
+  /**
+   * Add a native remoteAddress strategy. Unleash matches each entry as an exact
+   * IP or as a CIDR range, so `10.0.0.0/22` covers 10.0.0.0 to 10.0.3.255.
+   */
+  async setRemoteAddressStrategy(
+    projectId: string,
+    featureName: string,
+    environment: string,
+    options: SetRemoteAddressOptions,
+  ): Promise<FeatureStrategy> {
+    const parameters: Record<string, string> = { IPs: options.ips.join(',') };
+
+    const payload = {
+      name: 'remoteAddress',
+      title: options.title,
+      disabled: options.disabled,
+      parameters,
+      ...(options.constraints ? { constraints: options.constraints } : {}),
+    };
+
+    if (this.dryRun) {
+      return {
+        id: 'dry-run-strategy',
+        name: payload.name,
+        title: payload.title ?? null,
+        disabled: payload.disabled ?? false,
+        featureName,
+        parameters,
+        constraints: payload.constraints ?? [],
+      };
+    }
+
+    return this.requestJson<FeatureStrategy>(
+      `/api/admin/projects/${encodeURIComponent(projectId)}/features/${encodeURIComponent(featureName)}/environments/${encodeURIComponent(environment)}/strategies`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      {
+        errorMessage: `Failed to configure remoteAddress strategy for feature ${featureName} in ${environment}`,
         networkErrorMessage: `Failed to connect to Unleash API while configuring strategy for feature ${featureName}`,
       },
     );

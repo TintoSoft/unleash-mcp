@@ -24,6 +24,7 @@ The MCP server exposes the following tools:
 - `detect_flag`: Discovers existing feature flags to avoid duplicates.
 - `wrap_change`: Provides guidance on how to wrap a change in a feature flag.
 - `set_flag_rollout`: Configures rollout strategies for a feature flag (does not enable the flag).
+- `set_flag_remote_address`: Adds a native IPs (remoteAddress) strategy for IP addresses or CIDR ranges (does not enable the flag).
 - `get_flag_state`: Surfaces a feature flag's metadata and its activation strategies.
 - `get_flag_events`: Reads a flag's event log — who changed it, when, in which environment and what changed.
 - `list_flags`: Lists all feature flags in a project, with optional pagination and sort order.
@@ -926,6 +927,43 @@ and drop the squad-old tag.
 **Tool output**
 
 Returns a confirmation of the tags added and removed, the flag's resulting tag list, and links to the flag in the Unleash Admin UI and Admin API. The structured output includes `addedTags`, `removedTags`, and the resulting `tags`.
+
+### Set flag remote address
+
+The `set_flag_remote_address` tool adds a native `remoteAddress` (IPs) strategy to a feature flag environment. Each entry is matched as an exact IP or as a CIDR range, so `10.0.0.0/22` covers 10.0.0.0 to 10.0.3.255. This does not enable the flag; use `toggle_flag_environment` to turn it on.
+
+#### When to use
+
+Use this tool to turn a flag on only for an internal network, such as an office, before a wider rollout. Strategies in the same environment are OR-ed, so remove any broader strategy with `remove_flag_strategy` if only these IPs should match.
+
+#### Parameters
+
+- `featureName` (required): Feature flag name.
+- `environment` (required): Target environment.
+- `ips` (required): IP addresses or CIDR ranges. Each entry is validated before the API call.
+- `projectId` (optional): Project ID (defaults to `UNLEASH_DEFAULT_PROJECT`).
+- `title` (optional): Descriptive title for the strategy.
+- `disabled` (optional): Create the strategy disabled.
+- `constraints` (optional): Constraints that gate the strategy (same shape as in `set_flag_rollout`).
+
+#### Usage example
+
+**Tool payload**
+
+```json
+{
+  "featureName": "new-checkout-flow",
+  "environment": "production",
+  "projectId": "ecommerce",
+  "ips": ["10.0.0.0/22"],
+  "title": "Office network",
+  "constraints": [{ "contextName": "webVersion", "operator": "NUM_GTE", "value": "1.43.0" }]
+}
+```
+
+**Tool output**
+
+Returns a confirmation with the IPs, the created strategy in the structured output, and links to the flag in the Unleash Admin UI and Admin API.
 
 ### Update flag strategy
 
