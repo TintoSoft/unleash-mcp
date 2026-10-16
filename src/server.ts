@@ -27,6 +27,7 @@ import { getFlagStateTool } from './tools/getFlagState.js';
 import { listFlagsTool } from './tools/listFlags.js';
 import { listProjectsTool } from './tools/listProjects.js';
 import { removeFlagStrategyTool } from './tools/removeFlagStrategy.js';
+import { setFlagRemoteAddressTool } from './tools/setFlagRemoteAddress.js';
 import { setFlagRolloutTool } from './tools/setFlagRollout.js';
 import { toggleFlagEnvironmentTool } from './tools/toggleFlagEnvironment.js';
 import type { ToolDefinition } from './tools/types.js';
@@ -150,6 +151,7 @@ export function createUnleashMcpServer(options: CreateServerOptions): McpServer 
     wrapChangeTool,
     cleanupFlagTool,
     setFlagRolloutTool,
+    setFlagRemoteAddressTool,
     getFlagStateTool,
     getFlagEventsTool,
     listFlagsTool,
