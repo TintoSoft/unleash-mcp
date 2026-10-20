@@ -32,6 +32,7 @@ The MCP server exposes the following tools:
 - `toggle_flag_environment`: Enables or disables a feature flag in an environment.
 - `update_flag_strategy`: Updates an existing strategy in place (constraints, rollout, variants).
 - `update_flag_tags`: Adds or removes tags on an existing feature flag.
+- `complete_flag`: Marks a feature flag as completed in its lifecycle (kept or discarded) without archiving it.
 - `remove_flag_strategy`: Deletes a feature flag's strategy from an environment.
 - `cleanup_flag`: Generates instructions for safely removing flagged code paths.
 
@@ -928,6 +929,41 @@ and drop the squad-old tag.
 
 Returns a confirmation of the tags added and removed, the flag's resulting tag list, and links to the flag in the Unleash Admin UI and Admin API. The structured output includes `addedTags`, `removedTags`, and the resulting `tags`.
 
+
+### Complete flag lifecycle
+
+The `complete_flag` tool marks a feature flag as completed in its lifecycle and records whether the feature was kept or discarded. Unlike archiving, the flag stays live: its environments, strategies and value do not change.
+
+#### When to use
+
+Use this tool once the code that read the flag has been removed and released, when older client versions (mobile apps, cached web builds) may still evaluate the flag. Archiving would turn the flag off for those clients; completing it keeps their behavior and takes the flag out of the list of flags pending cleanup. Use `get_flag_state` to check the flag before completing it.
+
+#### Parameters
+
+- `featureName` (required): Feature flag name.
+- `projectId` (optional): Project ID (defaults to `UNLEASH_DEFAULT_PROJECT`).
+- `status` (optional): `kept` when the code kept the flagged path (default), or `discarded` when the feature was removed.
+- `statusValue` (optional): The value that was kept, e.g. the winning variant of an experiment.
+
+#### Usage example
+
+**Agent prompt**
+
+```
+The cleanup of "new-checkout-flow" is released. Use complete_flag to mark it
+as completed and kept.
+```
+
+**Tool payload**
+
+```json
+{
+  "featureName": "new-checkout-flow",
+  "projectId": "ecommerce",
+  "status": "kept"
+}
+```
+
 ### Set flag remote address
 
 The `set_flag_remote_address` tool adds a native `remoteAddress` (IPs) strategy to a feature flag environment. Each entry is matched as an exact IP or as a CIDR range, so `10.0.0.0/22` covers 10.0.0.0 to 10.0.3.255. This does not enable the flag; use `toggle_flag_environment` to turn it on.
@@ -1159,6 +1195,7 @@ src/
 │   ├── removeFlagStrategy.ts    # remove_flag_strategy tool
 │   ├── updateFlagStrategy.ts    # update_flag_strategy tool
 │   ├── updateFlagTags.ts        # update_flag_tags tool
+│   ├── completeFlag.ts          # complete_flag tool
 │   ├── strategySchemas.ts       # Shared variant/constraint input schemas
 │   └── tagSchemas.ts            # Shared flag tag input schema and formatting
 ├── resources/

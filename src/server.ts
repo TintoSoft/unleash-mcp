@@ -19,6 +19,7 @@ import {
   readProjectsResource,
 } from './resources/unleashResources.js';
 import { cleanupFlagTool } from './tools/cleanupFlag.js';
+import { completeFlagTool } from './tools/completeFlag.js';
 import { createFlagTool } from './tools/createFlag.js';
 import { detectFlagTool } from './tools/detectFlag.js';
 import { evaluateChangeTool } from './tools/evaluateChange.js';
@@ -160,6 +161,7 @@ export function createUnleashMcpServer(options: CreateServerOptions): McpServer 
     removeFlagStrategyTool,
     updateFlagStrategyTool,
     updateFlagTagsTool,
+    completeFlagTool,
   ];
 
   const registerTool = server.registerTool.bind(server) as (
