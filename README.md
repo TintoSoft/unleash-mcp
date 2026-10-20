@@ -1109,6 +1109,9 @@ The tool returns comprehensive cleanup instructions that guide the LLM through:
 3. Removing flag checks while preserving the correct code path.
 4. Cleaning up unused imports with language-specific guidance.
 5. Verifying changes with post-cleanup search and test steps.
+6. Completing the flag in Unleash with [`complete_flag`](#complete-flag-lifecycle) once the cleanup is released: `kept` when the enabled path was preserved, `discarded` when the disabled path was. The flag is never archived, because older clients may still evaluate it.
+
+The response also includes this last step in `structuredContent.nextStep` (`tool`, `when: "after_release"` and the `complete_flag` arguments), so an agent can schedule it after the release.
 
 If `preservePath` is not provided, the tool returns instructions to ask the user which path to keep before proceeding.
 

@@ -54,6 +54,28 @@ const cleanupFlagInputSchema = z.object({
 
 type CleanupFlagInput = z.infer<typeof cleanupFlagInputSchema>;
 
+const completionStatusFor = (preservePath: PreservePath) =>
+  preservePath === 'enabled' ? 'kept' : 'discarded';
+
+function buildCompletionStep(flagName: string, preservePath: PreservePath): string {
+  const status = completionStatusFor(preservePath);
+
+  return `## Step 5: Complete the Flag in Unleash
+
+Once the cleanup is merged **and released**, mark the flag as completed with \`complete_flag\`:
+
+\`\`\`json
+{
+  "featureName": "${flagName}",
+  "status": "${status}"
+}
+\`\`\`
+
+Do not archive the flag and do not turn it off. Older client versions (cached web builds, mobile apps) may still evaluate it, and archiving would change what they see. Completing it keeps its environments and strategies as they are.
+
+Do it after the release, not after the merge: until the release is out, the running clients still depend on the flag.`;
+}
+
 /**
  * cleanup_flag tool implementation
  *
@@ -107,6 +129,7 @@ export async function cleanupFlag(context: ServerContext, args: unknown): Promis
       input.preservePath as PreservePath,
       cleanupInstructions,
       importGuidance,
+      buildCompletionStep(input.flagName, input.preservePath as PreservePath),
       input.files,
     );
 
@@ -127,6 +150,14 @@ export async function cleanupFlag(context: ServerContext, args: unknown): Promis
         preservePath: input.preservePath,
         targetFiles: input.files,
         detectedLanguage,
+        nextStep: {
+          tool: 'complete_flag',
+          when: 'after_release',
+          arguments: {
+            featureName: input.flagName,
+            status: completionStatusFor(input.preservePath as PreservePath),
+          },
+        },
       },
     };
   } catch (error) {
@@ -216,6 +247,7 @@ function buildCleanupGuidance(
   preservePath: PreservePath,
   cleanupInstructions: string,
   importGuidance: string,
+  completionStep: string,
   files?: string[],
 ): string {
   const scope =
@@ -245,6 +277,10 @@ ${importGuidance}
 
 ---
 
+${completionStep}
+
+---
+
 ## Final Reminder
 
 After completing the cleanup:
@@ -252,6 +288,7 @@ After completing the cleanup:
 2. **Test**: Run tests to ensure functionality is preserved
 3. **Review**: Check complex cases manually
 4. **Report**: Provide a summary of files changed and any issues found
+5. **Complete**: After the release, call \`complete_flag\` (Step 5). Never archive the flag
 
 **Remember**: You're preserving the **${preservePath}** path and removing the **${preservePath === 'enabled' ? 'disabled' : 'enabled'}** path.
 
@@ -275,6 +312,7 @@ It guides you through:
 - Removing flag checks while preserving the correct code path
 - Cleaning up unused imports and dead code
 - Verifying and testing the changes
+- Completing the flag in Unleash with complete_flag once the cleanup is released (never archiving it)
 
 **When to use this tool**:
 - After a feature flag has been rolled out to 100% and is no longer needed
