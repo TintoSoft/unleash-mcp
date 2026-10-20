@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cleanupFlagTool } from './cleanupFlag.js';
+import { completeFlagTool } from './completeFlag.js';
 import { createFlagTool } from './createFlag.js';
 import { detectFlagTool } from './detectFlag.js';
 import { evaluateChangeTool } from './evaluateChange.js';
@@ -31,6 +32,7 @@ const tools = [
   removeFlagStrategyTool,
   updateFlagStrategyTool,
   updateFlagTagsTool,
+  completeFlagTool,
   sendFeedbackTool,
 ] as ToolDefinition[];
 

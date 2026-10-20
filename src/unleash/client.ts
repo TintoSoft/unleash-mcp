@@ -810,6 +810,30 @@ export class UnleashClient {
     }
   }
 
+  async completeFeature(
+    projectId: string,
+    featureName: string,
+    completion: { status: 'kept' | 'discarded'; statusValue?: string },
+  ): Promise<void> {
+    if (this.dryRun) {
+      return;
+    }
+
+    const path = `/api/admin/projects/${encodeURIComponent(projectId)}/features/${encodeURIComponent(featureName)}/lifecycle/complete`;
+
+    await this.request(
+      path,
+      {
+        method: 'POST',
+        body: JSON.stringify(completion),
+      },
+      {
+        errorMessage: `Failed to mark feature ${featureName} as completed`,
+        networkErrorMessage: `Failed to connect to Unleash API while completing feature ${featureName}`,
+      },
+    );
+  }
+
   async toggleFeatureEnvironment(
     projectId: string,
     featureName: string,

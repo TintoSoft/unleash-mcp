@@ -62,6 +62,7 @@ describe('remote MCP handler (e2e)', () => {
     const toolNames = toolsResult.result.tools.map((t: { name: string }) => t.name).sort();
     expect(toolNames).toEqual([
       'cleanup_flag',
+      'complete_flag',
       'create_flag',
       'detect_flag',
       'evaluate_change',
